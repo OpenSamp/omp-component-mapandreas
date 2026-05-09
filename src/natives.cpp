@@ -9,6 +9,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <cstdint>
 
 // MSVC: amx_StrParam expands to alloca, which is declared in <malloc.h>.
 // On glibc Linux it would come from <alloca.h> but <stdlib.h> works there too.
@@ -147,7 +148,9 @@ extern "C" cell AMX_NATIVE_CALL Natives::FindAverageZ(AMX* amx, cell* params)
 
 extern "C" cell AMX_NATIVE_CALL Natives::GetAddress(AMX* amx, cell* params)
 {
-    return (int) &MapAndreas;
+    // Legacy AMX cell is 32-bit. On x64 the singleton pointer does not fit;
+    // truncation is intentional and kept only for source compatibility.
+    return static_cast<cell>(reinterpret_cast<std::uintptr_t>(&MapAndreas));
 }
 
 //----------------------------------------------------------

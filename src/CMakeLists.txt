@@ -39,12 +39,6 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 	target_compile_options(${PROJECT_NAME} PRIVATE -Wno-write-strings -Wno-deprecated-declarations)
 endif()
 
-if(MSVC)
-	# C4311: legacy MapAndreas_GetAddress casts a 64-bit pointer down to a 32-bit
-	# Pawn cell — a known limitation of the native, kept only for source compat.
-	target_compile_options(${PROJECT_NAME} PRIVATE /wd4311)
-endif()
-
 if(WIN32)
 	target_compile_definitions(${PROJECT_NAME} PRIVATE
 		NOMINMAX

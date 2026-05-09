@@ -1,20 +1,39 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.19)
+
+# Vendored open.mp-sdk subtrees still pin VERSION 2.x/3.0, which CMake 3.31+
+# refuses. Force a policy floor for every sub-project so configure works.
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE STRING "")
 
 project(mapandreas)
 
-list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/lib/cmake-modules")
+set(MA_VERSION "v1.2.0")
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-if(UNIX)
-	set(CMAKE_CXX_FLAGS "-m32 -fvisibility=hidden")
-	set(CMAKE_C_FLAGS "-m32 -fvisibility=hidden")
-	set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS OFF)
+add_compile_definitions(MA_VERSION="${MA_VERSION}")
+
+if(MSVC)
+	add_compile_options(/MP)
 endif()
 
-# removes the sprintf warnings from plugin-natives
-add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+# Architecture selector. Default to host bitness; override with -DMA_ARCH=x86 for
+# a 32-bit build (kept around in case anyone still hosts a legacy SA-MP runtime).
+if(NOT DEFINED MA_ARCH)
+	if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+		set(MA_ARCH "x86")
+	else()
+		set(MA_ARCH "x64")
+	endif()
+endif()
 
-set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/test/plugins)
-set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
-set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
+if(MA_ARCH STREQUAL "x86" AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+	add_compile_options(-m32)
+	add_link_options(-m32)
+endif()
+
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+# open.mp SDK (interface target; propagates NOMINMAX, /fp:strict, glm, etc.)
+add_subdirectory(lib/open.mp-sdk)
 
 add_subdirectory(src)

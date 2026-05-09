@@ -1,78 +1,71 @@
-# Map Andreas Plugin
+# omp-component-mapandreas
 
-[![sampctl](https://shields.southcla.ws/badge/sampctl-mapandreas-2f2f2f.svg?style=for-the-badge)](https://github.com/Southclaws/samp-plugin-mapandreas)
+Open.mp port of the legacy SA-MP MapAndreas plugin (originally by Kalcor, extended by Mauzen). Loads a pre-baked GTA: SA height map (`SAfull.hmap` / `SAmin.hmap`) and answers ground-Z queries — handy for anti-cheat (airbreak detection), spawn placement, "fall-through-the-ground" prevention, and similar.
 
-This plugin was initially made by Kalcor and extended by Mauzen. It allows you
-to load different height maps and check the min height for x,y coordinates. You
-can us it as example for an anti cheat to detect airbreaks easier or to prevent
-falling through the ground.
+The repo wraps the original height-map core in an open.mp `IComponent`, so it loads side-by-side with other components instead of via the legacy `Load`/`AmxLoad` plugin entry points.
 
-Features:
+## What's exposed
 
-*   Load height map
-*   You can also implement it in your sampgdk plugins.
+Two parallel surfaces, both backed by the same singleton `CMapAndreas`:
 
-Topics:
+**Pawn natives** (kept for source-compat with legacy gamemodes — `mapandreas.inc`):
+- `MapAndreas_Init(mode, const name[]="", len=sizeof(name))`
+- `MapAndreas_FindZ_For2DCoord(Float:X, Float:Y, &Float:Z)`
+- `MapAndreas_FindAverageZ(Float:X, Float:Y, &Float:Z)`
+- `MapAndreas_SetZ_For2DCoord(Float:X, Float:Y, Float:Z)`
+- `MapAndreas_SaveCurrentHMap(const name[])`
+- `MapAndreas_Unload()`
+- `MapAndreas_GetAddress()` — only meaningful on x86 (returns truncated pointer on x64; left for legacy compat)
 
-*   [MapAndreas v1.2.1 Updated @ sa-mp.com](http://forum.sa-mp.com/showthread.php?t=275492)
-*   [MapAndreas v1.2.1 Updated @ sa-mp.com](http://forum.sa-mp.com/showpost.php?p=3130004&postcount=153)
-*   [MapAndreas v1.0 beta @ sa-mp.com](http://forum.sa-mp.com/showthread.php?t=120013)
+**C++ component interface** — `IMapAndreasComponent : IExtension` declared in [src/mapandreas-api.hpp](src/mapandreas-api.hpp). Other open.mp components query it the canonical way:
 
-## Installation
+```cpp
+#include "mapandreas-api.hpp"
 
-Simply install to your project:
-
-```bash
-sampctl package install Southclaws/samp-plugin-mapandreas
-```
-
-Include in your code and begin using the library:
-
-```pawn
-#include <mapandreas>
-```
-
-## Usage
-
-| native                      | params                        |           return           |
-| --------------------------- | ----------------------------- | :------------------------: |
-| MapAndreas_Init             | mode, const name[]            | Error code or 0 on success |
-| MapAndreas_Unload           | const name[], const message[] |  int (0 failed/1 success)  |
-| MapAndreas_SaveCurrentHMap  | const name[]                  |  int (0 failed/1 success)  |
-| MapAndreas_FindZ_For2DCoord | Float:X, Float:Y, &Float:Z    |  int (0 failed/1 success)  |
-| MapAndreas_FindAverageZ     | Float:X, Float:Y, &Float:Z    |  int (0 failed/1 success)  |
-| MapAndreas_SetZ_For2DCoord  | Float:X, Float:Y, Float:Z     |  int (0 failed/1 success)  |
-
-### Example
-
-Initialize MapAndreas and get a position.
-
-```pawn
-public OnGameModeInit(playerid, cmdtext[])
-{
-    MapAndreas_Init(MAP_ANDREAS_MODE_FULL, "scriptfiles/SAFull.hmap");
-    new Float:pos;
-    if (MapAndreas_FindAverageZ(20.001, 25.006, pos)) {
-        // Found position - position saved in 'pos'
-    }
-    return 0;
+IComponent* maComp = components->queryComponent(kMapAndreasComponentUID);
+IMapAndreasComponent* ma = queryExtension<IMapAndreasComponent>(maComp);
+if (ma) {
+    float z;
+    if (ma->findZ(x, y, z)) { /* ... */ }
 }
 ```
 
-## Testing
+For non-C++ runtimes (e.g. SampSharp / .NET), see [openmp-sampsharp-mapandreas](https://github.com/OpenSamp/SampSharp.OpenMp.MapAndreas) — it ships a separate `SampSharp.MapAndreas` component that queries this extension and re-exports a flat C ABI suitable for P/Invoke.
 
-Test with make:
+## Building
 
-```bash
-make test-windows
-```
-
-If you want to build/test the Linux version, use Docker:
+Standard CMake. Defaults to host bitness (x64); pass `-DMA_ARCH=x86` to force 32-bit.
 
 ```bash
-make build-linux
-make test-linux
+git clone --recursive https://github.com/OpenSamp/omp-component-mapandreas.git
+cd omp-component-mapandreas
+cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build build --config RelWithDebInfo
+# → build/bin/mapandreas.{so,dll}
 ```
 
-This will spin up a Debian container to build and then run sampctl with
-`--container` to run the test package in a Linux environment.
+## CI / artifacts
+
+GitHub Actions ([build-and-publish.yml](.github/workflows/build-and-publish.yml)) builds two flavours on every push:
+
+- **Linux x64** → published to GHCR as a scratch image: `ghcr.io/opensamp/omp-component-mapandreas:<tag>` containing `mapandreas.so` at root. Consumed via `COPY --from=ghcr.io/opensamp/omp-component-mapandreas:latest /mapandreas.so /target/`.
+- **Windows x64** → uploaded as a workflow artifact (`mapandreas-windows-x64`) containing `mapandreas.dll` + `.pdb`. Download from the run page.
+
+## Runtime
+
+Drop the binary into your open.mp server's `components/` folder. The component registers automatically on `omp-server` startup; no extra config.lua entries needed beyond the standard component discovery.
+
+Height-map data files (`SAfull.hmap` ≈ 72MB / `SAmin.hmap` ≈ 8MB) are not shipped here — grab them from the original SA-MP MapAndreas distribution and drop into your server's `scriptfiles/`. `MapAndreas_Init(mode)` defaults to `scriptfiles/SAfull.hmap` for `MODE_FULL`/`MODE_NOBUFFER` and `scriptfiles/SAmin.hmap` for `MODE_MINIMAL`.
+
+## Modes
+
+| Mode      | Memory      | Disk I/O per query | Resolution |
+|-----------|-------------|--------------------|------------|
+| `FULL`    | ~72 MB      | none               | 1m grid    |
+| `MINIMAL` | ~8 MB       | none               | 3m grid    |
+| `NOBUFFER`| <1 MB       | seek+read each call| 1m grid    |
+| `MEDIUM`  | reserved by upstream — never implemented |
+
+## License
+
+Original plugin: SA-MP team, public domain. open.mp port: same.

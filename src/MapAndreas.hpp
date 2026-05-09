@@ -53,6 +53,8 @@ public:
     int SaveCurrentHMap(char* name);
     float GetAverageZ(float x, float y);
     bool Unload();
+
+    int GetMode() const { return m_iOperatingMode; }
 };
 
 //----------------------------------------------------------

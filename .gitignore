@@ -1,50 +1,43 @@
-#
-# Package only files
-#
+# Build artifacts
+build/
+build-*/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+CMakeUserPresets.json
+CMakeSettings.json
 
-# Compiled Bytecode
-*.amx
-
-# Vendor directory for dependencies
-dependencies/
-
-# Dependency versions lockfile
-pawn.lock
-
-
-#
-# Server/gamemode related files
-#
-
-# compiled settings file
-# keep `samp.json` file on version control
-# but make sure the `rcon_password` field is set externally
-# you can use the environment variable `SAMP_RCON_PASSWORD` to do this.
-server.cfg
-
-# Plugins directory
-plugins/
-
-# binaries
-*.exe
+# Native binaries (intermediate / final)
 *.dll
 *.so
-announce
-samp03svr
-samp-npc
+*.exp
+*.lib
+*.pdb
+*.o
+*.obj
 
-# logs
+# Legacy SA-MP plugin output
+*.amx
+
+# Pawn vendor dir / lockfile (legacy)
+dependencies/
+pawn.lock
+
+# Plugins / runtime files (legacy SA-MP plugin testing)
+plugins/
 logs/
+server.cfg
 server_log.txt
 
-#
-# Common files
-#
-
-*.sublime-workspace
-*.sublime-project
-
-build/
+# IDE / tooling local state
+.idea/
 .vs/
-*.so
-*.o
+.vscode/
+*.user
+*.swp
+
+# OS junk
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini

@@ -7,14 +7,19 @@
 //
 //----------------------------------------------------------
 
-#include <malloc.h>
 #include <stdio.h>
 #include <string.h>
 
-#include "amx/amx.h"
-#include "plugincommon.h"
+// MSVC: amx_StrParam expands to alloca, which is declared in <malloc.h>.
+// On glibc Linux it would come from <alloca.h> but <stdlib.h> works there too.
+#if defined(_WIN32)
+#  include <malloc.h>
+#else
+#  include <stdlib.h>
+#endif
 
 #include "MapAndreas.hpp"
+#include "common.hpp"
 #include "natives.hpp"
 
 CMapAndreas MapAndreas;
@@ -43,7 +48,7 @@ int set_amxstring(AMX* amx, cell amx_addr, const char* source, int max)
 //----------------------------------------------------------
 // native MapAndreas_Init(mode);
 
-PLUGIN_EXTERN_C cell AMX_NATIVE_CALL Natives::Init(AMX* amx, cell* params)
+extern "C" cell AMX_NATIVE_CALL Natives::Init(AMX* amx, cell* params)
 {
     char* cname;
     amx_StrParam(amx, params[2], cname);
@@ -60,7 +65,7 @@ PLUGIN_EXTERN_C cell AMX_NATIVE_CALL Natives::Init(AMX* amx, cell* params)
 //----------------------------------------------------------
 // native MapAndreas_FindZ_For2DCoord(Float:X, Float:Y, &Float:Z);
 
-PLUGIN_EXTERN_C cell AMX_NATIVE_CALL Natives::FindZ_For2DCoord(AMX* amx, cell* params)
+extern "C" cell AMX_NATIVE_CALL Natives::FindZ_For2DCoord(AMX* amx, cell* params)
 {
     float X = amx_ctof(params[1]);
     float Y = amx_ctof(params[2]);
@@ -82,7 +87,7 @@ PLUGIN_EXTERN_C cell AMX_NATIVE_CALL Natives::FindZ_For2DCoord(AMX* amx, cell* p
 //----------------------------------------------------------
 // native MapAndreas_SetZ_For2DCoord(Float:X, Float:Y, Float:Z);
 
-PLUGIN_EXTERN_C cell AMX_NATIVE_CALL Natives::SetZ_For2DCoord(AMX* amx, cell* params)
+extern "C" cell AMX_NATIVE_CALL Natives::SetZ_For2DCoord(AMX* amx, cell* params)
 {
     float X = amx_ctof(params[1]);
     float Y = amx_ctof(params[2]);
@@ -94,7 +99,7 @@ PLUGIN_EXTERN_C cell AMX_NATIVE_CALL Natives::SetZ_For2DCoord(AMX* amx, cell* pa
 //----------------------------------------------------------
 // native MapAndreas_SaveCurrentHMap(AMX* amx, cell* params);
 
-PLUGIN_EXTERN_C cell AMX_NATIVE_CALL Natives::SaveCurrentHMap(AMX* amx, cell* params)
+extern "C" cell AMX_NATIVE_CALL Natives::SaveCurrentHMap(AMX* amx, cell* params)
 {
     float X = amx_ctof(params[1]);
     float Y = amx_ctof(params[2]);
@@ -110,7 +115,7 @@ PLUGIN_EXTERN_C cell AMX_NATIVE_CALL Natives::SaveCurrentHMap(AMX* amx, cell* pa
 //----------------------------------------------------------
 // native MapAndreas_Unload();
 
-PLUGIN_EXTERN_C cell AMX_NATIVE_CALL Natives::_Unload(AMX* amx, cell* params)
+extern "C" cell AMX_NATIVE_CALL Natives::_Unload(AMX* amx, cell* params)
 {
     return MapAndreas.Unload();
 }
@@ -118,7 +123,7 @@ PLUGIN_EXTERN_C cell AMX_NATIVE_CALL Natives::_Unload(AMX* amx, cell* params)
 //----------------------------------------------------------
 // native MapAndreas_FindAverageZ(Float:X, Float:Y, &Float:Z);
 
-PLUGIN_EXTERN_C cell AMX_NATIVE_CALL Natives::FindAverageZ(AMX* amx, cell* params)
+extern "C" cell AMX_NATIVE_CALL Natives::FindAverageZ(AMX* amx, cell* params)
 {
     float X = amx_ctof(params[1]);
     float Y = amx_ctof(params[2]);
@@ -140,7 +145,7 @@ PLUGIN_EXTERN_C cell AMX_NATIVE_CALL Natives::FindAverageZ(AMX* amx, cell* param
 //----------------------------------------------------------
 // native MapAndreas_GetAddress();
 
-PLUGIN_EXTERN_C cell AMX_NATIVE_CALL Natives::GetAddress(AMX* amx, cell* params)
+extern "C" cell AMX_NATIVE_CALL Natives::GetAddress(AMX* amx, cell* params)
 {
     return (int) &MapAndreas;
 }
